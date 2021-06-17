@@ -1,0 +1,30 @@
+select distinct ?s0 ?p0 ?o0_s1_var ?p1 (group_concat(distinct ?o1; SEPARATOR="|") as ?o1_target) ?qr0i0 ?qv0i0 ?diameter
+where
+{
+    values (?o0_s1_var) {
+        ("?var0")
+    }
+        values (?diameter){
+        ("2")
+    }
+    {
+        graph ?g0 {
+            <<?s0 ?p0 ?o0_s1>> ?qr0i0 ?qv0i0
+        }
+        graph ?g1 {
+            ?o0_s1 ?p1 ?o1
+        }
+
+
+        FILTER (
+            (?g0 = <split:validation> && ?g1 = <split:train-validation> ) ||
+            (?g0 = <split:train-validation> && ?g1 = <split:validation> )
+        )
+
+
+    }
+
+    #Check whether the subjects are IRIs otherwise they can bind to statements themselves.
+    FILTER  (isIRI(?s0) && isIRI(?o0_s1))
+}
+GROUP BY ?s0 ?p0 ?o0_s1_var ?p1 ?qr0i0 ?qv0i0 ?diameter

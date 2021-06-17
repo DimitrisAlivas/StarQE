@@ -1,0 +1,29 @@
+//This file was compiled with
+// ../protocolBuffers/protoc-3.15.8-linux-x86_64/bin/protoc -I=dataLoadingPipeline/  --python_out=dataLoadingPipeline/ dataLoadingPipeline/query.proto
+
+syntax = "proto3";
+
+message Triple{
+    uint32 subject = 1;
+    uint32 predicate = 2;
+    uint32 object = 3;
+}
+
+message Qualifier {
+    uint32 qualifier_relation = 1;
+    uint32 qualifier_value = 2;
+    uint32 corresponding_triple = 3;
+}
+
+
+message Query {
+    repeated Triple triples = 1;
+    repeated Qualifier qualifiers = 2;
+    repeated uint32 targets = 3;
+    uint32 diameter = 4;
+}
+
+message QueryData {
+    repeated Query queries = 1;
+}
+

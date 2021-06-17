@@ -1,0 +1,38 @@
+select distinct ?s0 ?p0 ?o0_s1_var ?p1 ?o1_s2_var ?p2 (group_concat(distinct ?o2; SEPARATOR="|") as ?o2_target) ?qr0i0 ?qv0i0 ?qr1i1 ?qv1i1 ?qr2i2 ?qv2i2 ?diameter
+where
+{
+    values (?o0_s1_var) {
+        ("?var0")
+    }
+    values (?o1_s2_var) {
+        ("?var1")
+    }
+    values (?diameter){
+        ("3")
+    }
+
+    {
+        graph ?g0 {
+            << ?s0 ?p0 ?o0_s1 >> ?qr0i0 ?qv0i0
+        }
+        graph ?g1 {
+            << ?o0_s1 ?p1 ?o1_s2 >> ?qr1i1 ?qv1i1
+        }
+        graph ?g2 {
+            <<?o1_s2 ?p2 ?o2>> ?qr2i2 ?qv2i2
+        }
+
+        FILTER (
+            (?g0 = <split:test> && ?g1 = <split:all> && ?g2 = <split:all>) ||
+            (?g0 = <split:all> && ?g1 = <split:test> && ?g2 = <split:all>) ||
+            (?g0 = <split:all> && ?g1 = <split:all> && ?g2 = <split:test>)
+        )
+
+    }
+
+    #Check whether the subjects are IRIs otherwise they can bind to statements themselves.
+    FILTER  (isIRI(?s0) && isIRI(?o0_s1) && isIRI(?o1_s2) && isIRI(?o2))
+
+}
+GROUP BY ?s0 ?p0 ?o0_s1_var ?p1 ?o1_s2_var ?p2 ?qr0i0 ?qv0i0 ?qr1i1 ?qv1i1 ?qr2i2 ?qv2i2  ?diameter
+HAVING (COUNT(?o2) < 100)

@@ -1,0 +1,11 @@
+LOAD WITH 'compute' <file:/opt/shared-files/wd50k_train.ttl> INTO GRAPH <split:train> ;
+LOAD WITH 'compute' <file:/opt/shared-files/wd50k_test.ttl> INTO GRAPH <split:test> ;
+LOAD WITH 'compute' <file:/opt/shared-files/wd50k_valid.ttl> INTO GRAPH <split:validation> ;
+
+LOAD WITH 'compute' <file:/opt/shared-files/wd50k_train.ttl> INTO GRAPH <split:train-validation> ;
+LOAD WITH 'compute' <file:/opt/shared-files/wd50k_valid.ttl> INTO GRAPH <split:train-validation> ;
+
+LOAD WITH 'compute' <file:/opt/shared-files/wd50k_train.ttl> INTO GRAPH <split:all> ;
+LOAD WITH 'compute' <file:/opt/shared-files/wd50k_test.ttl> INTO GRAPH <split:all> ;
+LOAD WITH 'compute' <file:/opt/shared-files/wd50k_valid.ttl> INTO GRAPH <split:all>
+

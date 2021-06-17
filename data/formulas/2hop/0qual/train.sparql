@@ -1,0 +1,18 @@
+select distinct ?s0 ?p0 ?o0_s1_var ?p1 (group_concat(distinct ?o1; SEPARATOR="|") as ?o1_target) ?diameter
+where
+{
+    values (?o0_s1_var) {
+        ("?var0")
+    }
+    values (?diameter){
+        ("2")
+    }
+    graph <split:train>{
+        ?s0 ?p0 ?o0_s1 .
+        ?o0_s1 ?p1 ?o1
+    }
+
+    #Check whether the subjects are IRIs otherwise they can bind to statements themselves.
+    FILTER  (isIRI(?s0) && isIRI(?o0_s1))
+}
+GROUP BY ?s0 ?p0 ?o0_s1_var ?p1 ?diameter

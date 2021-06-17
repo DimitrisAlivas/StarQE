@@ -1,0 +1,12 @@
+select distinct ?s0 ?p0 (group_concat(distinct ?o0; SEPARATOR="|") as ?o0_target) ?qr0i0 ?qv0i0 ?diameter
+where
+{
+    values (?diameter) {
+        (1)
+    }
+    graph <split:validation>{
+        << ?s0 ?p0 ?o0 >> ?qr0i0 ?qv0i0 .
+    }
+
+}
+GROUP BY ?s0 ?p0 ?qr0i0 ?qv0i0 ?diameter
