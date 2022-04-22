@@ -18,6 +18,9 @@ where
     #filtering out 1hop-2i queries that collapse to two hop queries
     FILTER (!(?o2_s0 = ?s1 && ?p0 = ?p1))
 
+    # preventing permutations. These can only happen in case the s1 and o2_s0 are the same node
+    FILTER ((?s1 != ?o2_s0) || (?s1 = ?o2_s0 && str(?p0)< str(?1) ))
+
     FILTER  (isIRI(?s2) && isIRI(?o2_s0) && isIRI(?s1))
 
 #     #filter out the nodes with an in degree >= 50

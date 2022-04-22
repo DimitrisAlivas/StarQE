@@ -72,7 +72,7 @@ class TargetPooling(GraphPooling):
         return x_e[mask]
 
 
-graph_pooling_resolver = Resolver.from_subclasses(
-    base=GraphPooling,
+graph_pooling_resolver: Resolver[GraphPooling] = Resolver.from_subclasses(
+    base=GraphPooling,  # type: ignore
     default=SumGraphPooling,
 )

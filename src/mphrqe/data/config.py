@@ -24,8 +24,8 @@ binary_query_root = data_root.joinpath("binaryQueries")
 triples_root = data_root.joinpath("triple_data")
 anzograph_init_root = data_root.joinpath("anzograph")
 
-# sparql_endpoint_address = "http://localhost:7200/repositories/wikidata50K"
-sparql_endpoint_address = "https://localhost:8256/sparql"
+sparql_endpoint_address = "http://localhost:7200/repositories/wd50K"
+# sparql_endpoint_address = "https://localhost:8256/sparql"
 sparql_endpoint_options = {'verify': False}
 
 # TODO: Should this be done here?

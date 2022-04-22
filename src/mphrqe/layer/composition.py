@@ -3,9 +3,8 @@ from abc import abstractmethod
 
 import torch
 from class_resolver import Resolver
+from pykeen.moves import irfft, rfft
 from torch import nn
-
-from ..moves import irfft, rfft
 
 __all__ = [
     "Composition",
@@ -150,7 +149,7 @@ class ComplexRotationComposition(Composition):
         return _complex_multiplication(x, y, y_norm=True)
 
 
-composition_resolver = Resolver.from_subclasses(
-    base=Composition,
+composition_resolver: Resolver[Composition] = Resolver.from_subclasses(
+    base=Composition,  # type: ignore
     default=MultiplicationComposition,
 )

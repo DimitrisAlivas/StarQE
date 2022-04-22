@@ -10,7 +10,6 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
-from rdflib.plugins.stores.sparqlstore import SPARQLStore
 from requests import HTTPError
 
 from .config import formula_root, query_root, sparql_endpoint_address as default_sparql_endpoint_address, sparql_endpoint_options as default_sparql_endpoint_options
@@ -172,6 +171,7 @@ def _execute_one_query(query: str, destination_path: Path, sparql_endpoint: str,
     Performs the query provided and writes the results as a CSV to the destination.
     the queries are shuffled randomly (fixed seed) before storing to make later sampling a top-k operation instead of real sampling
     """
+    from rdflib.plugins.stores.sparqlstore import SPARQLStore
     store = SPARQLStore(sparql_endpoint, returnFormat="csv", method="POST", **sparql_endpoint_options)  # headers={}
     global_logger = logging.getLogger()
     original_level = global_logger.getEffectiveLevel()

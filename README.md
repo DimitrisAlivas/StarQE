@@ -2,9 +2,9 @@
 
 <p align="center">
 <img src="https://img.shields.io/badge/python-3.8-blue.svg">
-<a href="https://github.com/DimitrisAlivas/StarQE/blob/master/LICENSE">
+<a href="https://github.com/DimitrisAlivas/mphrqe/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
-<a href="https://arxiv.org/abs/2106.08166"><img src="http://img.shields.io/badge/Paper-PDF-red.svg"></a>
+<a href="https://openreview.net/pdf?id=4rLw09TgRw9"><img src="http://img.shields.io/badge/Paper-PDF-red.svg"></a>
 </p>
 
 
@@ -15,12 +15,13 @@ This repository contains the code used for the experiments in the paper
 ```
 Query Embedding on Hyper-Relational Knowledge Graphs.
 Dimitrios Alivanistos and Max Berrendorf and Michael Cochez and Mikhail Galkin
+International Conference on Learning Representations, 2022
 ```
 
 If you encounter any problems, or have suggestions on how to improve this code, open an issue.
 
 **Abstract:**
-Multi-hop logical reasoning is an established problem in the field of representation learning on knowledge graphs (KGs).
+> Multi-hop logical reasoning is an established problem in the field of representation learning on knowledge graphs (KGs).
 It subsumes both one-hop link prediction as well as other more complex types of logical queries.
 Existing algorithms operate only on classical, triple-based graphs, whereas modern KGs often employ a hyper-relational modeling paradigm.
 In this paradigm, typed edges may have several key-value pairs known as qualifiers that provide fine-grained context for facts.
@@ -36,11 +37,10 @@ We developed our repository using Python 3.8.5. Other version may also work.
 
 First, please ensure that you have properly installed
 
-* torch 1.8.1
-* torch [scatter, sparse, and geometric](https://github.com/rusty1s/pytorch_geometric)
-    * Make sure these are correctly installed. The setup does not take care of these.
+* torch 1.11.0, cf. [here](https://pytorch.org/get-started/locally/)
+* torch [scatter, sparse, and geometric](https://github.com/rusty1s/pytorch_geometric), cf. [here](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
 
-in your environment. Running experiments is possible on both CPU and GPU. On a GPU, the training should go noticeably faster. If you are using GPU, please make sure that the installed versions match your CUDA version.
+in your environment - the setup does not take care of these. Running experiments is possible on both CPU and GPU. On a GPU, the training should go noticeably faster. If you are using GPU, please make sure that the installed versions match your CUDA version.
 
 We recommend the use of virtual environments, be it `virtualenv` or `conda`.
 
@@ -58,9 +58,21 @@ pip install -e .
 
 To log results, we suggest using [wandb](https://wandb.ai/). Instructions on installation and setting up can be found here: https://docs.wandb.ai/quickstart
 
+## Installing additional packages
+
+Apart from the base packages installed with `pip install -e .` we provide with extra functionality that requires additional packages.
+
+```bash
+pip install -e '.[wandb]' # For integration with wandb
+pip install -e '.[test]'  # For running tests ( for further instructions see below )
+pip install -e '.[dev]'   # For development
+pip install -e '.[rdf]'   # For working with RDF data + triplestore integration
+pip install -e '.[vis]'   # For visualisations (qualifier importance etc) 
+```
+
 ## Running test (optional) ##
 
-You can run the tests by installing the test dependencies
+You can run the tests by installing the test dependencies (should already be installed from the previous section)
 ```bash
 pip install -e '.[test]'
 ```
@@ -188,12 +200,12 @@ hqe evaluate \
 If you find this work useful, please consider citing
 
 ```bibtex
-@misc{alivanistos2021query,
-      title={Query Embedding on Hyper-relational Knowledge Graphs}, 
-      author={Dimitrios Alivanistos and Max Berrendorf and Michael Cochez and Mikhail Galkin},
-      year={2021},
-      eprint={2106.08166},
-      archivePrefix={arXiv},
-      primaryClass={cs.AI}
+@inproceedings{
+  alivanistos2022query,
+  title={Query Embedding on Hyper-Relational Knowledge Graphs},
+  author={Dimitrios Alivanistos and Max Berrendorf and Michael Cochez and Mikhail Galkin},
+  booktitle={International Conference on Learning Representations},
+  year={2022},
+  url={https://openreview.net/forum?id=4rLw09TgRw9}
 }
 ```

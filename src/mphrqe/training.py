@@ -4,8 +4,9 @@ from typing import Any, Callable, Iterable, Mapping, Optional
 
 import torch.utils.data
 import tqdm
-from class_resolver import Hint, Resolver
+from class_resolver import HintOrType, OptionalKwargs
 from pykeen.utils import resolve_device
+from pykeen.optimizers import optimizer_resolver
 
 from .data import QueryGraphBatch
 from .early_stopping import EarlyStopper
@@ -20,14 +21,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-optimizer_resolver = Resolver(
-    classes={
-        torch.optim.Adam,
-    },
-    base=torch.optim.Optimizer,  # type: ignore
-    default=torch.optim.Adam,
-)
 
 
 def _train_epoch(
@@ -87,15 +80,15 @@ def _train_epoch(
 def train_iter(
     model: QueryEmbeddingModel,
     data_loaders: Mapping[str, torch.utils.data.DataLoader[QueryGraphBatch]],
-    loss: Hint[QueryEmbeddingLoss] = None,
-    similarity: Hint[Similarity] = None,
-    optimizer: Hint[torch.optim.Optimizer] = None,
-    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+    loss: HintOrType[QueryEmbeddingLoss] = None,
+    similarity: HintOrType[Similarity] = None,
+    optimizer: HintOrType[torch.optim.Optimizer] = None,
+    optimizer_kwargs: OptionalKwargs = None,
     device: Optional[torch.device] = None,
     num_epochs: int = 1,
     evaluation_frequency: int = 1,
     result_callback: Optional[Callable[[Mapping[str, Any]], None]] = None,
-    early_stopper_kwargs: Optional[Mapping[str, Any]] = None,
+    early_stopper_kwargs: OptionalKwargs = None,
     overwrite_with_best_model: bool = True,
     delete_best_model_file: bool = True,
 ) -> Iterable[Mapping[str, Mapping[str, float]]]:

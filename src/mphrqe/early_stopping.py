@@ -13,6 +13,7 @@ from typing import Any, Mapping, Optional, Sequence, Union
 
 import torch
 from torch import nn
+from pykeen.typing import RANK_REALISTIC
 
 from .utils import get_from_nested_dict
 
@@ -65,7 +66,7 @@ class EarlyStopper:
     def __init__(
         self,
         best_model_path: Union[None, str, pathlib.Path] = None,
-        key: Sequence[str] = ("validation", "avg.hits_at_10"),
+        key: Sequence[str] = ("validation", f"{RANK_REALISTIC}.hits_at_10"),
         patience: Union[int, float] = float("+inf"),
         relative_delta: float = 0.0,
         larger_is_better: bool = True,

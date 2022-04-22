@@ -27,7 +27,7 @@ class Test_assert_query_validity(unittest.TestCase):
         queryBuilder.set_subject_predicate_object(2,
                                                   "?var1",
                                                   "https://www.wikidata.org/wiki/Property:P1411",
-                                                  "https://www.wikidata.org/wiki/Q505449")
+                                                  get_entity_mapper().get_target_entity_name())
         # def set_qualifier_rel_val(self, tripleIndex: int, qualifier_index: int, predicate: str, value: str):
         queryBuilder.set_qualifier_rel_val(0, 0, "https://www.wikidata.org/wiki/Property:P355", "https://www.wikidata.org/wiki/Q1033465")
         queryBuilder.set_qualifier_rel_val(0, 1, "https://www.wikidata.org/wiki/Property:P190", "https://www.wikidata.org/wiki/Q274670")
@@ -68,7 +68,7 @@ class Test_assert_query_validity(unittest.TestCase):
 
             assert query.edge_index[1, 6] == get_entity_mapper().lookup("?var1")
             assert query.edge_index[1, 7] == get_entity_mapper().get_entity_for_predicate(get_relation_mapper().lookup("https://www.wikidata.org/wiki/Property:P1411"))
-            assert query.edge_index[1, 8] == get_entity_mapper().lookup("https://www.wikidata.org/wiki/Q505449")
+            assert query.edge_index[1, 8] == get_entity_mapper().get_target_index()
 
             # test whether the qualifiers have been correctly attached
             assert query.edge_index[0, 9] == query.edge_index[0, 0]

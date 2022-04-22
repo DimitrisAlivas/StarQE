@@ -6,21 +6,28 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, Iterable, Mapping, Optional, Sequence, Type, TypeVar
+from typing import (Callable, Generic, Iterable, Mapping, Optional, Sequence,
+                    Type, TypeVar)
 
 import dill
 import torch
 
-from .config import binary_query_root, query_root
-from .generated.query_pb2 import Qualifier as pb_Qualifier, Query as pb_Query, QueryData as pb_QueryData, Triple as pb_Triple
-from .mapping import EntityMapper, get_entity_mapper, get_relation_mapper
 from ..typing import LongTensor
+from .config import binary_query_root, query_root
+from .config import sparql_endpoint_address as default_sparql_endpoint_address
+from .config import sparql_endpoint_options as default_sparql_endpoint_options
+from .generated.query_pb2 import Qualifier as pb_Qualifier
+from .generated.query_pb2 import Query as pb_Query
+from .generated.query_pb2 import QueryData as pb_QueryData
+from .generated.query_pb2 import Triple as pb_Triple
+from .mapping import EntityMapper, get_entity_mapper, get_relation_mapper
 
 __all__ = [
     "convert_all",
     "QueryData",
     "TensorBuilder",
     "ProtobufBuilder",
+    "StrippedSPARQLResultBuilder"
 ]
 
 logger = logging.getLogger(__name__)
@@ -46,6 +53,12 @@ class BinaryFormBuilder(Generic[T], ABC):
     def set_predicate(self, index: int, predicate: str):
         pass
 
+    def set_subject_predicate_object(self, tripleIndex: int, subject: str, predicate: str, obj: str):
+        """Helper function to set subject, predicate and object at once"""
+        self.set_subject(tripleIndex, subject)
+        self.set_predicate(tripleIndex, predicate)
+        self.set_object(tripleIndex, obj)
+
     @abstractmethod
     def set_qualifier_rel(self, tripleIndex: int, index: int, predicate: str):
         pass
@@ -53,6 +66,13 @@ class BinaryFormBuilder(Generic[T], ABC):
     @abstractmethod
     def set_qualifier_val(self, tripleIndex: int, index: int, value: str):
         pass
+
+    def set_qualifier_rel_val(self, tripleIndex: int, qualifier_index: int, predicate: str, value: str):
+        """
+        Set the relation `predicate` and value `value` for the qualifier attached to triple with index `tripleIndex` and qualifier index `qualifier_index`
+        """
+        self.set_qualifier_rel(tripleIndex, qualifier_index, predicate)
+        self.set_qualifier_val(tripleIndex, qualifier_index, value)
 
     @abstractmethod
     def set_targets(self, values: Iterable[str]):
@@ -349,11 +369,6 @@ class ProtobufBuilder(BinaryFormBuilder[pb_Query]):  # type: ignore
         # to the index of the forward edge qaulifier in self.quals. The reverse must be put at the offset numberOfQualifiers
         self.qual_mapping = {}
 
-    def set_subject_predicate_object(self, tripleIndex: int, subject: str, predicate: str, obj: str):
-        self.set_subject(tripleIndex, subject)
-        self.set_predicate(tripleIndex, predicate)
-        self.set_object(tripleIndex, obj)
-
     def set_subject(self, index: int, entity: str):
         assert not self._is_triple_set[index][0], f"The subject for triple with index {index} has already been set"
         entity_index = get_entity_mapper().lookup(entity)
@@ -374,13 +389,6 @@ class ProtobufBuilder(BinaryFormBuilder[pb_Query]):  # type: ignore
         predicate_index = get_relation_mapper().lookup(predicate)
         self.query.triples[index].predicate = predicate_index
         self._is_triple_set[index][1] = True
-
-    def set_qualifier_rel_val(self, tripleIndex: int, qualifier_index: int, predicate: str, value: str):
-        """
-        Set the relation `predicate` and value `value` for the qualifier attached to triple with index `tripleIndex` and qualifier index `qualifier_index`
-        """
-        self.set_qualifier_rel(tripleIndex, qualifier_index, predicate)
-        self.set_qualifier_val(tripleIndex, qualifier_index, value)
 
     def set_qualifier_rel(self, tripleIndex: int, qualifier_index: int, predicate: str):
         assert not self._is_qual_set[qualifier_index][0], f"The relation for qualifier with index {qualifier_index} has already been set"
@@ -429,6 +437,107 @@ class ProtobufBuilder(BinaryFormBuilder[pb_Query]):  # type: ignore
             output_file.write(query_data.SerializeToString())
 
 
+@dataclasses.dataclass()
+class Triple:
+    """Representation of one non-qualified triple"""
+
+    # The subject of the triple
+    subject: str
+
+    # The predicate of the triple
+    predicate: str
+
+    # The object of the triple
+    object: str
+
+
+def StrippedSPARQLResultBuilder(sparql_endpoint=None, sparql_endpoint_options=None):
+    sparql_endpoint = sparql_endpoint or default_sparql_endpoint_address
+    sparql_endpoint_options = sparql_endpoint_options or default_sparql_endpoint_options
+
+    class StrippedSPARQLResultBuilderClass(BinaryFormBuilder[str]):  # type: ignore
+        def __init__(self, numberOfTriples, numberOfQualifiers):
+
+            self.triples = [Triple(None, None, None) for _ in range(numberOfTriples)]
+
+        def set_subject(self, index: int, entity: str):
+            self.triples[index].subject = entity
+
+        def set_object(self, index: int, entity: str):
+            self.triples[index].object = entity
+
+        def set_predicate(self, index: int, predicate: str):
+            self.triples[index].predicate = predicate
+
+        def set_qualifier_rel(self, tripleIndex: int, index: int, predicate: str):
+            """These get intentionally ignored in this converter"""
+            pass
+
+        def set_qualifier_val(self, tripleIndex: int, index: int, value: str):
+            """These get intentionally ignored in this converter"""
+            pass
+
+        def set_targets(self, values: Iterable[str]):
+            """These get intentionally ignored in this converter"""
+            pass
+
+        def set_diameter(self, diameter: int):
+            """These get intentionally ignored in this converter"""
+            pass
+
+        @staticmethod
+        def convertPossibleTarget(value: str):
+            if value == get_entity_mapper().get_target_entity_name():
+                return "?target"
+            return value
+
+        @staticmethod
+        def convertPossibleEntity(value: str):
+            if value.startswith("?"):
+                return value
+            return f"<{value}>"
+
+        def build(self) -> str:
+            start = "SELECT distinct ?target WHERE { graph <split:all> {"
+            bgp = ""
+            for triple in self.triples:
+                bgp += f"{self.convertPossibleEntity(self.convertPossibleTarget(triple.subject))} "
+                bgp += f"{self.convertPossibleEntity(self.convertPossibleTarget(triple.predicate))} "
+                bgp += f"{self.convertPossibleEntity(self.convertPossibleTarget(triple.object))} . "
+            end = "} }"
+            query_string = start + bgp + end
+            return query_string
+
+        @staticmethod
+        def get_file_extension() -> str:
+            """Get the extension to be used for files stored with the store method. Each deriving class must implement its own static method."""
+            return ".txt"
+
+        def store(self, collection: Iterable[pb_Query], absolute_target_path: Path):  # type: ignore
+            try:
+                from rdflib.plugins.stores.sparqlstore import SPARQLStore
+            except ImportError as error:
+                raise ImportError("Storing to a SPARQL store required rdflib to be installed.") from error
+
+            triple_store = SPARQLStore(sparql_endpoint, returnFormat="csv", method="POST", **sparql_endpoint_options)  # headers={}
+            global_logger = logging.getLogger()
+            original_level = global_logger.getEffectiveLevel()
+            global_logger.setLevel(logging.ERROR)
+            try:
+                with open(absolute_target_path, "w") as output_file:
+                    for query_string in collection:
+                        result = triple_store.query(query_string)
+                        separator = ""
+                        target_string = ""
+                        for target in list(result):
+                            target_string += (separator + target['target'])
+                            separator = "|"
+                        output_file.write(target_string + "\n")
+            finally:
+                global_logger.setLevel(original_level)
+    return StrippedSPARQLResultBuilderClass
+
+
 def convert_one(absolute_source_path: Path, absolute_target_path: Path, builderClass: Type[BinaryFormBuilder]) -> Mapping[str, str]:
     """Convert a file of textual queries to binary format."""
     converted = []
@@ -444,7 +553,9 @@ def convert_one(absolute_source_path: Path, absolute_target_path: Path, builderC
         # We count the number of query relations in the headers to get the number of triples
         number_of_qualifiers = sum(1 for header in all_headers if header.strip().startswith("qr"))
 
+        query_count = 0
         for row in reader:
+            query_count += 1
             builder = builderClass(number_of_triples, number_of_qualifiers)
             for (part, value) in row.items():
                 sub_parts = part.split("_")
@@ -491,7 +602,10 @@ def convert_one(absolute_source_path: Path, absolute_target_path: Path, builderC
                         logger.warning(f"Unknown column with name \"{subpart}\" - ignored")
             converted.append(builder.build())
     # Only storing left
-    # Use highest available protocol for better speed / size
+    if query_count == 0:
+        logging.warning(f"No triples found in {absolute_source_path}, the binary file will not contain any queries.")
+        # need to create the first builder still. Otehrwise we reuse it from the loop
+        builder = builderClass(number_of_triples, number_of_qualifiers)
     builder.store(converted, absolute_target_path)
     return {"state": "Success"}
 
@@ -500,6 +614,7 @@ def convert_all(
     source_directory: Optional[Path] = None,
     target_directory: Optional[Path] = None,
     builder: Type[BinaryFormBuilder] = ProtobufBuilder,
+    filter: Callable[[str], bool] = None
 ) -> None:
     """Convert all textual queries to binary format."""
     source_directory = source_directory or query_root
@@ -509,7 +624,8 @@ def convert_all(
     for query_file_path in source_directory.rglob("*.csv.gz"):
         # take ".csv.gz" of
         name_stem = Path(query_file_path.stem).stem
-
+        if filter and not filter(name_stem):
+            continue
         # get absolute source path
         relative_source_path = query_file_path.relative_to(source_directory)
         relative_source_directory = relative_source_path.parent

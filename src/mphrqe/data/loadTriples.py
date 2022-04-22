@@ -8,8 +8,6 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
-from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
-
 from .config import sparql_endpoint_address as default_sparql_endpoint
 from .config import sparql_endpoint_options as default_spaqrl_endpoint_options
 
@@ -30,6 +28,7 @@ def load_data(
     """
     Execute the insert queries in the source directory to populate the triple store.
     """
+    from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 
     sparql_endpoint = sparql_endpoint or default_sparql_endpoint
     # we make a deepcopy because we will modify the headers and do not want to modify the config itself

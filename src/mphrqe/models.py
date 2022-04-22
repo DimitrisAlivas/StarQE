@@ -2,10 +2,10 @@
 import itertools
 import logging
 from abc import abstractmethod
-from typing import Any, Iterator, Mapping, Optional, cast
+from typing import Any, Iterable, Mapping, Optional, cast
 
 import torch
-from class_resolver import Hint
+from class_resolver import HintOrType
 from torch import nn
 
 from .data import QueryGraphBatch
@@ -57,16 +57,16 @@ class StarEQueryEmbeddingModel(QueryEmbeddingModel):
         embedding_dim: int = 256,
         num_layers: int = 2,
         dropout: float = 0.3,
-        activation: Hint[nn.Module] = nn.ReLU,
-        composition: Hint[Composition] = None,
-        qualifier_aggregation: Hint[QualifierAggregation] = None,
+        activation: HintOrType[nn.Module] = nn.ReLU,
+        composition: HintOrType[Composition] = None,
+        qualifier_aggregation: HintOrType[QualifierAggregation] = None,
         qualifier_aggregation_kwargs: Optional[Mapping[str, Any]] = None,
-        qualifier_composition: Hint[Composition] = None,
+        qualifier_composition: HintOrType[Composition] = None,
         use_bias: bool = False,
-        message_weighting: Hint[MessageWeighting] = None,
+        message_weighting: HintOrType[MessageWeighting] = None,
         message_weighting_kwargs: Optional[Mapping[str, Any]] = None,
         edge_dropout: float = 0.0,
-        graph_pooling: Hint[GraphPooling] = None,
+        graph_pooling: HintOrType[GraphPooling] = None,
         repeat_layers_until_diameter: bool = False,
         stop_at_diameter: bool = False,
     ):
@@ -136,6 +136,7 @@ class StarEQueryEmbeddingModel(QueryEmbeddingModel):
         # If we can stop at the diamter, and knowing the maximum diameter, we do not even take the unnecessary layers in the iterator
         if self.repeat_layers_until_diameter or self.stop_at_diameter:
             max_diameter = int(max(query_graph_batch.query_diameter))
+        needed_layers: Iterable
         if self.repeat_layers_until_diameter and self.stop_at_diameter:
             needed_layers = itertools.islice(itertools.cycle(self.layers), 0, max_diameter)
         elif self.repeat_layers_until_diameter and not self.stop_at_diameter:
@@ -145,7 +146,7 @@ class StarEQueryEmbeddingModel(QueryEmbeddingModel):
         elif not self.repeat_layers_until_diameter and self.stop_at_diameter:
             needed_layers = itertools.islice(self.layers, 0, min(len(self.layers), max_diameter))
         elif not self.repeat_layers_until_diameter and not self.stop_at_diameter:
-            needed_layers = cast(Iterator[Any], self.layers)
+            needed_layers = self.layers
         else:
             raise Exception("")
 

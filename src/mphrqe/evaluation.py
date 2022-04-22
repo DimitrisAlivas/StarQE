@@ -1,5 +1,8 @@
 """Evaluation utilities."""
 import dataclasses
+import logging
+import os
+import pathlib
 from abc import abstractmethod
 from typing import Collection, List, Mapping, MutableMapping, Optional, Tuple, Union, cast
 
@@ -7,10 +10,11 @@ import numpy
 import pandas
 import torch
 import torch.utils.data
-from pykeen.evaluation.rank_based_evaluator import RANK_AVERAGE, RANK_BEST, RANK_TYPES, RANK_WORST
+from pykeen.evaluation.rank_based_evaluator import RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC, RANK_TYPES
 from tqdm.auto import tqdm
 
 from .data import QueryGraphBatch
+from .data.mapping import get_entity_mapper
 from .loss import QueryEmbeddingLoss
 from .models import QueryEmbeddingModel
 from .similarity import Similarity
@@ -20,6 +24,8 @@ __all__ = [
     "RankingMetricAggregator",
     "evaluate",
 ]
+
+logger = logging.getLogger(__name__)
 
 MICRO_AVERAGE = "micro"
 MACRO_AVERAGE = "macro"
@@ -292,9 +298,9 @@ class RankingMetricAggregator(ScoreAggregator):
             targets=targets,
             average=self.average,
         )
-        self._aggregators[RANK_BEST].process_ranks(ranks.optimistic, weight=ranks.weight)
-        self._aggregators[RANK_WORST].process_ranks(ranks.pessimistic, weight=ranks.weight)
-        self._aggregators[RANK_AVERAGE].process_ranks(ranks.realistic, weight=ranks.weight)
+        self._aggregators[RANK_OPTIMISTIC].process_ranks(ranks.optimistic, weight=ranks.weight)
+        self._aggregators[RANK_PESSIMISTIC].process_ranks(ranks.pessimistic, weight=ranks.weight)
+        self._aggregators[RANK_REALISTIC].process_ranks(ranks.realistic, weight=ranks.weight)
         assert ranks.expected_rank is not None
         self._expected_ranks.append(ranks.expected_rank.detach().cpu())
         self._expected_ranks_weights.append(ranks.weight)
@@ -311,9 +317,9 @@ class RankingMetricAggregator(ScoreAggregator):
         else:
             weights = torch.cat(cast(List[torch.Tensor], self._expected_ranks_weights))
         expected_mean_rank = _weighted_mean(tensor=torch.cat(self._expected_ranks), weight=weights).item()
-        result[f"{RANK_AVERAGE}.expected_mean_rank"] = expected_mean_rank
-        result[f"{RANK_AVERAGE}.adjusted_mean_rank"] = result[f"{RANK_AVERAGE}.mean_rank"] / expected_mean_rank
-        result[f"{RANK_AVERAGE}.adjusted_mean_rank_index"] = 1 - ((result[f"{RANK_AVERAGE}.mean_rank"] - 1) / (expected_mean_rank - 1))
+        result[f"{RANK_REALISTIC}.expected_mean_rank"] = expected_mean_rank
+        result[f"{RANK_REALISTIC}.adjusted_mean_rank"] = result[f"{RANK_REALISTIC}.mean_rank"] / expected_mean_rank
+        result[f"{RANK_REALISTIC}.adjusted_mean_rank_index"] = 1 - ((result[f"{RANK_REALISTIC}.mean_rank"] - 1) / (expected_mean_rank - 1))
         return result
 
 
@@ -355,3 +361,145 @@ def evaluate(
         loss=validation_loss.item() / len(data_loader),
         **evaluator.finalize(),
     )
+
+
+def expected_mean_rank_from_csv(
+    csv_path: Union[pathlib.Path, os.PathLike],
+    average: str = MICRO_AVERAGE,
+    num_entities: Optional[int] = None,
+) -> float:
+    """Compute expected mean rank for queries stored as CSV."""
+    # TODO: Fix the number of entities
+    num_entities = num_entities or get_entity_mapper().highest_entity_index + 1
+
+    # normalize path
+    csv_path = pathlib.Path(csv_path).expanduser().resolve()
+    df = pandas.read_csv(csv_path)
+    logger.info(f"Read {df.shape[0]} queries from {csv_path.as_uri()}")
+
+    target_columns = [c for c in df.columns if c.endswith("target")]
+    assert len(target_columns) == 1
+
+    # aggregate
+    nominator = denominator = 0
+    for nt in (df[target_columns[0]].str.count("|") + 1):
+        num_candidates = num_entities - nt + 1
+        exp = 0.5 * (num_candidates + 1)
+        if average == MICRO_AVERAGE:
+            # micro average, each true answer's rank counts
+            nominator += exp * nt
+            denominator += nt
+        elif average == MACRO_AVERAGE:
+            # macro average, all true answer's contribute together as one
+            nominator += exp
+            denominator += 1
+        else:
+            raise ValueError(average)
+
+    return nominator / denominator
+
+
+@torch.no_grad()
+def evaluate_qualifier_impact(
+    data_loader: torch.utils.data.DataLoader[QueryGraphBatch],
+    model: QueryEmbeddingModel,
+    similarity: Similarity,
+    ks: Collection[int] = (1, 3, 5, 10),
+    average: str = MICRO_AVERAGE,
+    restrict_relations: Optional[Collection[int]] = None,
+) -> pandas.DataFrame:
+    """
+    Evaluate the impact of qualifier pairs for each qualifier relation.
+
+    :param data_loader:
+        The evaluation data loader. batch_size = 1 is required.
+    :param model:
+        The model to evaluate.
+    :param similarity:
+        The similarity used to compute scores between query embedding and entity embeddings.
+    :param ks:
+        The values for which to compute Hits@k.
+    :param average:
+        The average to use for the scores.
+    :param restrict_relations:
+        If given, restrict evaluation to the relations for the given IDs.
+
+    :return: columns: metric | relation_id | type | value
+        The results as a dataframe.
+
+    :raise NotImplementedError:
+        For batch_size > 1.
+    """
+    # make our lives easier
+    if data_loader.batch_size is None or data_loader.batch_size > 1:
+        raise NotImplementedError("Batching is not implemented yet! Thus, pass a dataloader with batch_size=1.")
+
+    # set model into evaluation mode
+    model.eval()
+
+    # two evaluators for each relation: one having access to full information
+    evaluator: MutableMapping[int, Tuple[RankingMetricAggregator, RankingMetricAggregator]] = dict()
+
+    # make a (hash) set for faster existence checks
+    if restrict_relations is not None:
+        restrict_relations = set(restrict_relations)
+
+    batch: QueryGraphBatch
+    for batch in tqdm(data_loader, desc="Qualifier Impact Evaluation", unit="batch", unit_scale=True):
+        # guaranteed to be of batch_size = 1, i.e., contain only a single query
+
+        #: The targets, in format of pairs (graph_id, entity_id)
+        #: shape: (2, num_targets)
+        targets = batch.targets.to(model.device)
+
+        # note: since we require batch_size = 1, graph_id will always be zero
+        assert (targets[0] == 0).all()
+
+        # compute scores with full qualifier access
+        full_scores = similarity(x=model(batch), y=model.x_e)
+
+        # determine occurring qualifier relations
+        # note: these are the batch-local IDs!
+        local_qualifier_relations_in_batch = batch.qualifier_index[0].unique()
+
+        # store full qualifier index
+        full_qualifier_index = batch.qualifier_index
+
+        # restricted evaluation for each occurring relation
+        global_relation_ids = batch.relation_ids[local_qualifier_relations_in_batch].tolist()
+        for local_relation_id, relation_id in zip(
+            local_qualifier_relations_in_batch,
+            global_relation_ids,
+        ):
+            # If evaluation should be restricted to certain relations, skip relations if necessary
+            if restrict_relations is not None and relation_id not in restrict_relations:
+                continue
+
+            # make sure that we have ranking aggregators
+            # note: we could initialize them beforehand, but then we would need to know the number of relations
+            evaluator.setdefault(
+                relation_id, (
+                    RankingMetricAggregator(ks=ks, average=average),  # full
+                    RankingMetricAggregator(ks=ks, average=average),  # restricted
+                ),
+            )
+            full_evaluator, restricted_evaluator = evaluator[relation_id]
+
+            # process full scores
+            full_evaluator.process_scores_(scores=full_scores, targets=targets)
+
+            # remove qualifier pairs for the currently considered relation
+            batch.qualifier_index = full_qualifier_index[:, full_qualifier_index[0] != local_relation_id]
+
+            # compute scores on restricted batch
+            restricted_scores = similarity(x=model(batch), y=model.x_e)
+
+            # process restricted scores
+            restricted_evaluator.process_scores_(scores=restricted_scores, targets=targets)
+
+    return pandas.DataFrame(data=[
+        (metric, relation_id, label, value)
+        for relation_id, evaluator_pair in evaluator.items()
+        for label, evaluator_ in zip(["full", "restricted"], evaluator_pair)
+        for metric, value in evaluator_.finalize().items()
+    ], columns=["metric", "relation_id", "type", "value"])

@@ -13,7 +13,7 @@ class QueryEmbeddingLossTests(unittest_templates.GenericTestCase[QueryEmbeddingL
     num_targets: int = 5
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
-        self.scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
+        self.scores = torch.randn(self.batch_size, self.num_entities, requires_grad=True)
         self.targets = torch.stack([
             torch.randint(high=self.batch_size, size=(self.num_targets,)),
             torch.randint(high=self.num_entities, size=(self.num_targets,)),

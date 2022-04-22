@@ -2,7 +2,7 @@
 from typing import Any, Mapping, Optional, Tuple
 
 import torch
-from class_resolver import Hint, Resolver
+from class_resolver import HintOrType, Resolver
 from torch import nn
 
 from .util import activation_resolver, get_parameter, softmax
@@ -81,7 +81,7 @@ class AttentionMessageWeighting(MessageWeighting):
         self,
         output_dim: int,
         num_heads: int = 8,
-        activation: Hint[nn.Module] = nn.LeakyReLU,
+        activation: HintOrType[nn.Module] = nn.LeakyReLU,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         super().__init__()

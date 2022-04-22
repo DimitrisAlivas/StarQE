@@ -6,9 +6,10 @@ import pprint
 from typing import List, Optional, Sequence, Tuple, cast
 
 import optuna
-from class_resolver import Hint, Resolver
+from class_resolver import HintOrType, Resolver
 from optuna import Trial
 from optuna.pruners import BasePruner, MedianPruner, NopPruner
+from pykeen.evaluation.rank_based_evaluator import RANK_REALISTIC
 
 from .data.loader import get_query_data_loaders, resolve_sample
 from .data.mapping import get_entity_mapper, get_relation_mapper
@@ -58,7 +59,7 @@ class Objective:
     log_level: str = "INFO"
 
     # Evaluation
-    metric: Sequence[str] = ("validation", "avg.hits_at_10")
+    metric: Sequence[str] = ("validation", f"{RANK_REALISTIC}.hits_at_10")
 
     def __call__(self, trial: Trial) -> float:
         # set log level
@@ -72,20 +73,25 @@ class Objective:
         learning_rate = trial.suggest_float(name="learning_rate", low=self.lr_range[0], high=self.lr_range[1], log=True)
         log2_batch_size = trial.suggest_int(name="log2_batch_size", low=self.log2_batch_size_range[0], high=self.log2_batch_size_range[1])
         batch_size = 2 ** log2_batch_size
-        similarity = trial.suggest_categorical(name="similarity", choices=similarity_resolver.lookup_dict.keys())
+        similarity = cast(str, trial.suggest_categorical(name="similarity", choices=list(similarity_resolver.lookup_dict.keys())))
+        composition: Optional[str]
+        qualifier_composition: Optional[str]
+        activation: Optional[str]
+        graph_pooling: Optional[str]
+        message_weighting: Optional[str]
         if num_layers > 0:
             # trial.suggest_categorical(name="composition", choices=composition_resolver.lookup_dict.keys())
             composition = composition_resolver.normalize("MultiplicationComposition")
             # trial.suggest_categorical(name="qualifier_composition", choices=composition_resolver.lookup_dict.keys())
             qualifier_composition = composition
-            message_weighting = trial.suggest_categorical(name="message_weighting", choices=message_weighting_resolver.lookup_dict.keys())
+            message_weighting = cast(str, trial.suggest_categorical(name="message_weighting", choices=list(message_weighting_resolver.lookup_dict.keys())))
             dropout = trial.suggest_float(name="dropout", low=0.0, high=0.8, step=0.1)
             use_bias = cast(bool, trial.suggest_categorical(name="use_bias", choices=[False, True]))
-            activation = trial.suggest_categorical(name="activation", choices=[
+            activation = cast(str, trial.suggest_categorical(name="activation", choices=[
                 activation_resolver.normalize(name)
                 for name in ("LeakyReLU", "Identity", "PReLU", "ReLU")
-            ])
-            graph_pooling = trial.suggest_categorical(name="graph_pooling", choices=graph_pooling_resolver.lookup_dict.keys())
+            ]))
+            graph_pooling = cast(str, trial.suggest_categorical(name="graph_pooling", choices=list(graph_pooling_resolver.lookup_dict.keys())))
         else:
             composition = qualifier_composition = message_weighting = activation = None
             use_bias = False
@@ -199,8 +205,8 @@ class Objective:
         return result
 
 
-pruner_resolver = Resolver.from_subclasses(
-    base=BasePruner,
+pruner_resolver: Resolver[BasePruner] = Resolver.from_subclasses(
+    base=BasePruner,  # type: ignore
     default=NopPruner,
 )
 
@@ -216,8 +222,8 @@ def optimize(
     timeout: Optional[float],
     log_level: str,
     wandb_name: Optional[str] = None,
-    pruner: Hint[BasePruner] = MedianPruner,
-    metric: Sequence[str] = ("validation", "avg.hits_at_10"),
+    pruner: HintOrType[BasePruner] = MedianPruner,
+    metric: Sequence[str] = ("validation", f"{RANK_REALISTIC}.hits_at_10"),
     direction: str = "maximize",
     num_layers: Optional[int] = None,
 ):
@@ -257,13 +263,13 @@ def optimize(
         The best trial.
     """
     # resolver pruner
-    pruner = pruner_resolver.make(pruner)
+    pruner_instance = pruner_resolver.make(pruner)
 
     # Create a new study.
     study = optuna.create_study(
         storage=None,
         sampler=None,
-        pruner=pruner,
+        pruner=pruner_instance,
         direction=direction,
     )
 

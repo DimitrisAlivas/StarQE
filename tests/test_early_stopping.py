@@ -4,6 +4,7 @@ import torch
 from torch import nn
 
 from mphrqe.early_stopping import EarlyStopper
+from pykeen.typing import RANK_REALISTIC
 
 
 class _DummyModel(nn.Module):
@@ -30,7 +31,7 @@ def test_early_stopper():
         0.3,
         0.3,  # stop
     ]):
-        result = {"validation": {"avg.hits_at_10": value}}
+        result = {"validation": {f"{RANK_REALISTIC}.hits_at_10": value}}
         # modify model
         model.weight.data = torch.as_tensor(epoch, dtype=model.weight.dtype)
         should_stop = stopper.report_result(result=result, model=model, epoch=epoch)

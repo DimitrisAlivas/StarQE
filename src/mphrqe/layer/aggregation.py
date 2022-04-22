@@ -4,7 +4,7 @@ from typing import Any, Mapping, Optional
 
 import torch
 import torch_scatter
-from class_resolver import Hint, Resolver
+from class_resolver import HintOrType, Resolver
 from torch import nn
 
 from .util import activation_resolver, get_parameter, softmax
@@ -197,7 +197,7 @@ class AttentionQualifierAggregation(QualifierAggregation):
     def __init__(
         self,
         num_heads: int = 2,
-        activation: Hint[nn.Module] = nn.LeakyReLU,
+        activation: HintOrType[nn.Module] = nn.LeakyReLU,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         attention_drop: Optional[float] = None,
         **kwargs,
@@ -256,6 +256,6 @@ class AttentionQualifierAggregation(QualifierAggregation):
 
 
 qualifier_aggregation_resolver = Resolver.from_subclasses(
-    base=QualifierAggregation,
+    base=QualifierAggregation,  # type: ignore
     default=SumQualifierAggregation,
 )

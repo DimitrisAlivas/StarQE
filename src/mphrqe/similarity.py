@@ -115,7 +115,7 @@ class CosineSimilarity(DotProductSimilarity):
         return super().forward(x=x, y=y)
 
 
-similarity_resolver = Resolver.from_subclasses(
-    base=Similarity,
+similarity_resolver: Resolver[Similarity] = Resolver.from_subclasses(
+    base=Similarity,  # type: ignore
     default=DotProductSimilarity,
 )

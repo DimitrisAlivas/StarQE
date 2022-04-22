@@ -5,7 +5,7 @@ from typing import Any, Mapping, Optional, Tuple
 
 import torch
 import torch_scatter
-from class_resolver import Hint
+from class_resolver import HintOrType
 from torch import nn
 
 from .aggregation import QualifierAggregation, qualifier_aggregation_resolver
@@ -27,13 +27,13 @@ class StarEConvLayer(nn.Module):
         input_dim: int,
         output_dim: Optional[int] = None,
         dropout: float = 0.2,
-        activation: Hint[nn.Module] = nn.ReLU,
-        composition: Hint[Composition] = None,
-        qualifier_aggregation: Hint[QualifierAggregation] = None,
+        activation: HintOrType[nn.Module] = nn.ReLU,
+        composition: HintOrType[Composition] = None,
+        qualifier_aggregation: HintOrType[QualifierAggregation] = None,
         qualifier_aggregation_kwargs: Optional[Mapping[str, Any]] = None,
-        qualifier_composition: Hint[Composition] = None,
+        qualifier_composition: HintOrType[Composition] = None,
         use_bias: bool = True,
-        message_weighting: Hint[MessageWeighting] = None,
+        message_weighting: HintOrType[MessageWeighting] = None,
         message_weighting_kwargs: Optional[Mapping[str, Any]] = None,
         edge_dropout: float = 0.0,
     ):

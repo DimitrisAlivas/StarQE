@@ -59,7 +59,7 @@ class BCEQueryEmbeddingLoss(QueryEmbeddingLoss):
         return loss / scores.numel()
 
 
-query_embedding_loss_resolver = Resolver.from_subclasses(
-    base=QueryEmbeddingLoss,
+query_embedding_loss_resolver: Resolver[QueryEmbeddingLoss] = Resolver.from_subclasses(
+    base=QueryEmbeddingLoss,  # type: ignore
     default=BCEQueryEmbeddingLoss,
 )
