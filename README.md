@@ -2,7 +2,7 @@
 
 <p align="center">
 <img src="https://img.shields.io/badge/python-3.8-blue.svg">
-<a href="https://github.com/DimitrisAlivas/mphrqe/blob/master/LICENSE">
+<a href="https://github.com/DimitrisAlivas/StarQE/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
 <a href="https://openreview.net/pdf?id=4rLw09TgRw9"><img src="http://img.shields.io/badge/Paper-PDF-red.svg"></a>
 </p>
@@ -201,11 +201,11 @@ If you find this work useful, please consider citing
 
 ```bibtex
 @inproceedings{
-  alivanistos2022query,
-  title={Query Embedding on Hyper-Relational Knowledge Graphs},
-  author={Dimitrios Alivanistos and Max Berrendorf and Michael Cochez and Mikhail Galkin},
-  booktitle={International Conference on Learning Representations},
-  year={2022},
-  url={https://openreview.net/forum?id=4rLw09TgRw9}
+alivanistos2022query,
+title={Query Embedding on Hyper-Relational Knowledge Graphs},
+author={Dimitrios Alivanistos and Max Berrendorf and Michael Cochez and Mikhail Galkin},
+booktitle={International Conference on Learning Representations},
+year={2022},
+url={https://openreview.net/forum?id=4rLw09TgRw9}
 }
 ```
