@@ -1246,7 +1246,7 @@ def download_wd50k(store_path: pathlib.Path):
         filename = pathlib.Path(tmpdir) / 'wd50k.zip'
         # we do not use the unzipping capability of gdd because we need more control
         file_id = "1GijU6TG-ukq5-afuBQpqoUci-6TOPiEZ"
-        gdown.download(id=file_id, output=filename, quite=False)
+        gdown.download(id=file_id, output=filename.as_posix(), quiet=False)
         assert filename.exists(), RuntimeError("The file which should have been downloaded does not seem to exist on the file system")
         assert zipfile.is_zipfile(filename), Exception("The downloaded file does not seem to be a zip file")
         with zipfile.ZipFile(filename, 'r') as z:
