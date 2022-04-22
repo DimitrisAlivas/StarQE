@@ -15,6 +15,7 @@ This repository contains the code used for the experiments in the paper
 ```
 Query Embedding on Hyper-Relational Knowledge Graphs.
 Dimitrios Alivanistos and Max Berrendorf and Michael Cochez and Mikhail Galkin
+International Conference on Learning Representations, 2022
 ```
 
 If you encounter any problems, or have suggestions on how to improve this code, open an issue.
