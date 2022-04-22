@@ -40,7 +40,7 @@ In principle all of the below should also work with other RDF*/SPARQL* aware tri
 ## Downloading the triple data splits ###
 Download the data. This will create three files in `/data/triple_data`, each containing one of the splits.
 
-```python executables/main.py preprocess download_wd50k```
+```python executables/main.py preprocess download-wd50k```
 
 ## Put the data into the triple store ##
 

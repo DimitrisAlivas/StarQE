@@ -100,7 +100,12 @@ python executables/main.py
 
 ### Downloading the data
 
-To run experiments, we offer the preprocessed queries for download.
+As a first step, download the WD50K dataset:
+```bash
+hqe preprocess download-wd50k
+```
+
+Then to run experiments, we offer the preprocessed queries for download.
 It is also possible to run the preprocessing steps yourself, cf. the [data preprocessing README](src/mphrqe/data/README.md), using the following command
 
 ```bash

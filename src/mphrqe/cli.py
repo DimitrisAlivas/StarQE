@@ -1236,7 +1236,7 @@ def dataset_statistics(data_root: pathlib.Path):
 #     convert(None, None)
 
 
-@preprocess.command(name="download_wd50k", help="Download the w50k dataset in RDF* format")
+@preprocess.command(name="download-wd50k", help="Download the w50k dataset in RDF* format")
 @click.option('--store-path', type=pathlib.Path, default=triples_root, help='directory in which to put the queries')
 def download_wd50k(store_path: pathlib.Path):
     """Fetch binary query data from google drive."""
